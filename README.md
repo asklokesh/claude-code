@@ -45,6 +45,10 @@ For more installation options, uninstall steps, and troubleshooting, see the [se
 
 2. Navigate to your project directory and run `claude`.
 
+## Slack integration
+
+You can delegate coding tasks by @mentioning Claude in Slack. The Slack integration works with repositories on GitHub and GitLab (gitlab.com and self-hosted instances): connect your accounts in Claude Code web settings, choose a repository from the Slack repository selector, and open a pull request or a GitLab Merge Request from the completed session.
+
 ## Plugins
 
 This repository includes several Claude Code plugins that extend functionality with custom commands and agents. See the [plugins directory](./plugins/README.md) for detailed documentation on available plugins.

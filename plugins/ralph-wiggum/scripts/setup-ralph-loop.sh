@@ -81,7 +81,12 @@ HELP_EOF
         echo "   Invalid: decimals (10.5), negative numbers (-5), text" >&2
         exit 1
       fi
-      MAX_ITERATIONS="$2"
+      # Force base 10: a leading zero (08, 010) would otherwise be read as octal
+      MAX_ITERATIONS=$((10#$2))
+      if [[ $MAX_ITERATIONS -lt 0 ]]; then
+        echo "❌ Error: --max-iterations is out of range: $2" >&2
+        exit 1
+      fi
       shift 2
       ;;
     --completion-promise)

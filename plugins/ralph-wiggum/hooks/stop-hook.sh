@@ -47,6 +47,19 @@ if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
+# Normalize to base 10 so a leading zero (08, 010) is not read as octal
+ITERATION=$((10#$ITERATION))
+MAX_ITERATIONS=$((10#$MAX_ITERATIONS))
+if [[ $ITERATION -lt 0 ]] || [[ $MAX_ITERATIONS -lt 0 ]]; then
+  # Overflowed: fail safe (stop) rather than fail open (run forever)
+  echo "⚠️  Ralph loop: State file corrupted" >&2
+  echo "   File: $RALPH_STATE_FILE" >&2
+  echo "   Problem: 'iteration' or 'max_iterations' is out of range" >&2
+  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
+  rm "$RALPH_STATE_FILE"
+  exit 0
+fi
+
 # Check if max iterations reached
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."

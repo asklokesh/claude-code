@@ -81,7 +81,15 @@ HELP_EOF
         echo "   Invalid: decimals (10.5), negative numbers (-5), text" >&2
         exit 1
       fi
-      MAX_ITERATIONS="$2"
+      # Force base 10: a leading zero would otherwise be read as octal later.
+      MAX_ITERATIONS=$((10#$2))
+      # Reject values that overflowed (wrapped) instead of storing a number
+      # that means something else.
+      CANONICAL_INPUT="${2#"${2%%[!0]*}"}"
+      if [[ $MAX_ITERATIONS -lt 0 ]] || [[ "$MAX_ITERATIONS" != "${CANONICAL_INPUT:-0}" ]]; then
+        echo "❌ Error: --max-iterations is out of range: $2" >&2
+        exit 1
+      fi
       shift 2
       ;;
     --completion-promise)

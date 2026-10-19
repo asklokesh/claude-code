@@ -47,6 +47,24 @@ if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
+# Force base 10 so a leading zero (e.g. "08") is not parsed as octal, and fail
+# safe (stop) rather than fail open (run forever) on out-of-range values.
+ITERATION_RAW="$ITERATION"
+MAX_ITERATIONS_RAW="$MAX_ITERATIONS"
+ITERATION=$((10#$ITERATION))
+MAX_ITERATIONS=$((10#$MAX_ITERATIONS))
+ITERATION_CANON="${ITERATION_RAW#"${ITERATION_RAW%%[!0]*}"}"
+MAX_ITERATIONS_CANON="${MAX_ITERATIONS_RAW#"${MAX_ITERATIONS_RAW%%[!0]*}"}"
+if [[ $ITERATION -lt 0 ]] || [[ $MAX_ITERATIONS -lt 0 ]] || \
+   [[ "$ITERATION" != "${ITERATION_CANON:-0}" ]] || \
+   [[ "$MAX_ITERATIONS" != "${MAX_ITERATIONS_CANON:-0}" ]]; then
+  echo "⚠️  Ralph loop: State file has an out-of-range number" >&2
+  echo "   File: $RALPH_STATE_FILE" >&2
+  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
+  rm "$RALPH_STATE_FILE"
+  exit 0
+fi
+
 # Check if max iterations reached
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
   echo "🛑 Ralph loop: Max iterations ($MAX_ITERATIONS) reached."
@@ -86,16 +104,13 @@ if [[ -z "$LAST_LINE" ]]; then
   exit 0
 fi
 
-# Parse JSON with error handling
-LAST_OUTPUT=$(echo "$LAST_LINE" | jq -r '
+# Parse JSON with error handling (checks whether jq succeeded)
+if ! LAST_OUTPUT=$(echo "$LAST_LINE" | jq -r '
   .message.content |
   map(select(.type == "text")) |
   map(.text) |
   join("\n")
-' 2>&1)
-
-# Check if jq succeeded
-if [[ $? -ne 0 ]]; then
+' 2>&1); then
   echo "⚠️  Ralph loop: Failed to parse assistant message JSON" >&2
   echo "   Error: $LAST_OUTPUT" >&2
   echo "   This may indicate a transcript format issue" >&2

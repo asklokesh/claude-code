@@ -81,7 +81,14 @@ HELP_EOF
         echo "   Invalid: decimals (10.5), negative numbers (-5), text" >&2
         exit 1
       fi
-      MAX_ITERATIONS="$2"
+      # Parse as base 10 (a leading zero would otherwise mean octal in bash
+      # arithmetic) and reject values that would overflow a 64-bit integer.
+      MAX_ITERATIONS_DIGITS="${2#"${2%%[!0]*}"}"
+      if [[ ${#MAX_ITERATIONS_DIGITS} -gt 18 ]] || [[ $((10#$2)) -lt 0 ]]; then
+        echo "❌ Error: --max-iterations is out of range: $2" >&2
+        exit 1
+      fi
+      MAX_ITERATIONS=$((10#$2))
       shift 2
       ;;
     --completion-promise)

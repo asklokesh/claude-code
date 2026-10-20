@@ -47,24 +47,18 @@ if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
-# Normalize to base 10: a leading zero would otherwise be read as octal in
-# bash arithmetic, which can error out and silently skip the max-iterations
-# check. Fail safe (stop) on values that are out of range.
-for RALPH_NUM in "$ITERATION" "$MAX_ITERATIONS"; do
-  RALPH_DIGITS="${RALPH_NUM#"${RALPH_NUM%%[!0]*}"}"
-  if [[ ${#RALPH_DIGITS} -gt 18 ]]; then
-    echo "⚠️  Ralph loop: State file corrupted" >&2
-    echo "   File: $RALPH_STATE_FILE" >&2
-    echo "   Problem: numeric field is out of range (got: '$RALPH_NUM')" >&2
-    echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
-    rm "$RALPH_STATE_FILE"
-    exit 0
-  fi
-done
+# Normalize to base 10 (a leading zero would otherwise be read as octal).
+# If a value overflows, fail safe (stop) rather than fail open (run forever).
+ITERATION_DIGITS=$(printf '%s' "$ITERATION" | sed 's/^0*//')
+MAX_ITERATIONS_DIGITS=$(printf '%s' "$MAX_ITERATIONS" | sed 's/^0*//')
 ITERATION=$((10#$ITERATION))
 MAX_ITERATIONS=$((10#$MAX_ITERATIONS))
-if [[ $ITERATION -lt 0 ]] || [[ $MAX_ITERATIONS -lt 0 ]]; then
-  echo "⚠️  Ralph loop: State file has out-of-range numeric fields; stopping." >&2
+if [[ $ITERATION -lt 0 ]] || [[ $MAX_ITERATIONS -lt 0 ]] || \
+   [[ "$ITERATION" != "${ITERATION_DIGITS:-0}" ]] || \
+   [[ "$MAX_ITERATIONS" != "${MAX_ITERATIONS_DIGITS:-0}" ]]; then
+  echo "⚠️  Ralph loop: State file has an out-of-range number" >&2
+  echo "   File: $RALPH_STATE_FILE" >&2
+  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
   rm "$RALPH_STATE_FILE"
   exit 0
 fi
